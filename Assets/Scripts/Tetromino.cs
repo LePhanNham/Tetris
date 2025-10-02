@@ -5,12 +5,25 @@ using UnityEngine.Tilemaps;
 
 public enum Tetromino
 {
-    I, O, T, S, Z, J, L
+    I, J, L, O, S, T, Z
 }
 [System.Serializable]
-public struct TetrominoData
+public class TetrominoData
 {
     public Tetromino tetromino;
     public Tile tile;
     public Vector2Int[] cells; 
+
+    public void Initialize()
+    {
+        this.cells = Data.Cells[this.tetromino];
+    }
+
+    public void GetCells()
+    {
+        foreach (var cell in this.cells)
+        {
+            Debug.Log(cell);    
+        }
+    }
 }
