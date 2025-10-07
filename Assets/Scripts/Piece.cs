@@ -26,12 +26,21 @@ public class Piece : MonoBehaviour
     {
         get; private set;
     }
+
+    public float stepDelay = 1f;
+    public float lockDelay = 0.5f;
+
+
+    private float lockTime;
+    private float stepTime;
     public void Initialize(Board board, Vector3Int position, TetrominoData data)
     {
         this.board = board;
         this.position = position;
         this.data = data;
         this.rotationIndex = 0;
+        this.stepTime = Time.time + stepDelay;
+        this.lockTime = 0;
         if (this.cells == null)
         {
             this.cells = new Vector3Int[data.cells.Length];
@@ -45,6 +54,7 @@ public class Piece : MonoBehaviour
     private void Update()
     {
         this.board.Clear(this);
+        this.lockTime += Time.deltaTime;
         if (Input.GetKeyDown(KeyCode.Q))
         {
             Rotate(-1);
@@ -69,14 +79,38 @@ public class Piece : MonoBehaviour
         {
             HardDrop();
         }
+
+        if (Time.time >= this.stepTime)
+        {
+            Step();
+        }
         this.board.Set(this);
     }
-    
+
+    private void Step()
+    {
+        this.stepTime = Time.time + this.stepDelay;
+        Move(Vector2Int.down);
+
+        if (this.lockTime >= this.lockDelay)
+        {
+            Lock();
+        }
+    }
+
+    private void Lock()
+    {
+        this.board.Set(this);
+        this.board.ClearLine();
+        this.board.SpawnPiece();
+    }
     private void HardDrop() {
         while (Move(Vector2Int.down))
         {
             continue;
         }
+
+        Lock();
     }
     private bool Move(Vector2Int translation)
     {
@@ -87,6 +121,7 @@ public class Piece : MonoBehaviour
         if (valid)
         {
             this.position = newPosition;
+            this.lockTime = 0f;
         }
 
         return valid;
@@ -94,7 +129,7 @@ public class Piece : MonoBehaviour
 
     private void Rotate(int direction)
     {
-        int originalRotaionIndex = this.rotationIndex;
+        int originalRotaionIndex = rotationIndex;
         this.rotationIndex = Wrap(this.rotationIndex + direction,0,4);
         
         ApplyRotationMatrix(direction);
@@ -107,35 +142,37 @@ public class Piece : MonoBehaviour
     }   
 
     private void ApplyRotationMatrix(int direction)
-    {
-        for (int i = 0; i < this.cells.Length; i++)
+    { 
+        float[] matrix = Data.RotationMatrix;
+        
+        for (int i = 0; i < cells.Length; i++)
         {
-            Vector3 cell = this.cells[i];
+            Vector3 cell = cells[i];
+
             int x, y;
 
-            switch (this.data.tetromino)
+            switch (data.tetromino)
             {
                 case Tetromino.I:
                 case Tetromino.O:
                     cell.x -= 0.5f;
                     cell.y -= 0.5f;
-                    x = Mathf.RoundToInt((cell.x * Data.RotationMatrix[0] * direction) +
-                                         (cell.y * Data.RotationMatrix[1] * direction));
-                    y = Mathf.RoundToInt((cell.x * Data.RotationMatrix[2] * direction) +
-                                         (cell.y * Data.RotationMatrix[3] * direction));
+                    x = Mathf.CeilToInt((cell.x * matrix[0] * direction) + (cell.y * matrix[1] * direction));
+                    y = Mathf.CeilToInt((cell.x * matrix[2] * direction) + (cell.y * matrix[3] * direction));
                     break;
+
                 default:
-                    x = Mathf.RoundToInt((cell.x * Data.RotationMatrix[0] * direction) +
-                                         (cell.y * Data.RotationMatrix[1] * direction));
-                    y = Mathf.RoundToInt((cell.x * Data.RotationMatrix[2] * direction) +
-                                         (cell.y * Data.RotationMatrix[3] * direction));
+                    x = Mathf.RoundToInt((cell.x * matrix[0] * direction) + (cell.y * matrix[1] * direction));
+                    y = Mathf.RoundToInt((cell.x * matrix[2] * direction) + (cell.y * matrix[3] * direction));
                     break;
             }
-            this.cells[i] = new Vector3Int(x, y, 0);
-            
+
+            cells[i] = new Vector3Int(x, y, 0);
         }
         
     }
+    
+
     private bool WallKicks(int rotationIndex, int rotationDirection)
     {
         int wallKickIndex = GetWallKickIndex(rotationIndex, rotationDirection);

@@ -42,11 +42,24 @@ public class Board : MonoBehaviour
     public void SpawnPiece()
     {
         int random = Random.Range(0, tetrominoes.Count);
-        Debug.Log(random);
         TetrominoData data = tetrominoes[random];
-        data.GetCells();
         this.activePiece.Initialize(this,this.spawnPosition,data);
+        if (isValidPosition(this.activePiece, this.spawnPosition))
+        {
+            Set(this.activePiece);
+        }
+        else
+        {
+            GameOver();
+        }
         Set(this.activePiece);
+        
+        
+    }
+
+    private void GameOver()
+    {
+        this.tilemap.ClearAllTiles();
     }
 
 
@@ -84,5 +97,59 @@ public class Board : MonoBehaviour
         }
 
         return true;
+    }
+
+
+    public void ClearLine()
+    {
+        RectInt bounds = this.Bounds;
+        int row = Bounds.yMin;
+
+        while (row < bounds.yMax)
+        {
+            if (IsLineFull(row))
+            {
+                LineClear(row);
+            }
+
+            else
+            {
+                row++;
+            }
+        }
+    }
+
+    private bool IsLineFull(int row)
+    {
+        RectInt bounds = this.Bounds;
+
+        for (int col = bounds.xMin; col < bounds.xMax; col++)
+        {
+            Vector3Int pos = new Vector3Int(col, row, 0);
+            if (!tilemap.HasTile(pos)) return false;
+        }
+
+        return true;
+    }
+
+    private void LineClear(int row)
+    {
+        RectInt bounds = this.Bounds;
+        for (int col = bounds.xMin; col < bounds.xMax; col++)
+        {
+            Vector3Int pos = new Vector3Int(col, row, 0);
+            this.tilemap.SetTile(pos, null);
+        }
+
+        while (row < bounds.yMax)
+        {
+            for (int col = bounds.xMin; col < bounds.xMax; col++)
+            {
+                Vector3Int pos = new Vector3Int(col, row + 1, 0);
+                TileBase above = this.tilemap.GetTile(pos);
+                pos = new Vector3Int(col, row , 0);
+                this.tilemap.SetTile(pos, above);
+            }
+        }
     }
 }
